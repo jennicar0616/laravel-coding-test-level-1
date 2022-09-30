@@ -5,6 +5,7 @@ use Carbon\Carbon;
 use App\Models\Event;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Redis;
 
 class EventsController extends Controller
 {
@@ -15,7 +16,7 @@ class EventsController extends Controller
     /**
      * Display events
      */
-    public function getEvents()
+    public function getEvents($id = null)
     {
         $events = Event::where('is_deleted', 0)->get();
 
@@ -36,7 +37,14 @@ class EventsController extends Controller
         $data->slug = $validated['slug'];
         $data->save();
         
-        return response()->json($data);   
+        return response()->json($data);  
+        
+        $details = [
+            'title' => 'New Event created',
+            'body' => 'You created this event title '.$data->name
+        ];
+    
+        \Mail::to(Auth::user()->email)->send(new \App\Mail\MyMail($details));
     }
 
      /**

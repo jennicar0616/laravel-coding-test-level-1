@@ -28,3 +28,9 @@ Route::group(['prefix' => 'events'], function()
     Route::delete ('/{id}/delete', 'EventsController@delete')->name('event.delete');
 
 });
+
+Route::get('/login', 'LoginController@index');
+Route::post('/login/checklogin', 'LoginController@checklogin');
+Route::get('login/successlogin', 'LoginController@successlogin');
+Route::get('login/logout', 'LoginController@logout');
+

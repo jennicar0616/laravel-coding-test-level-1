@@ -2,8 +2,18 @@
     <head>
         <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.datatables.net/1.10.12/css/dataTables.bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.css" integrity="sha512-3pIirOrwegjM6erE5gPSwkUzO+3cTjpnV9lexlNZqvupR64iZBnOOTiiLPb9M36zpMScbmUNIcHUqKD47M719g==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     </head>
     <body> <br/>
+    @if(isset(Auth::user()->email))
+    <div class="alert alert-danger success-block">
+     <strong>Welcome {{ Auth::user()->email }}</strong>
+     <br />
+     <a href="{{ url('/login/logout') }}">Logout</a>
+    </div>
+   @else
+    <script>window.location = "/login";</script>
+   @endif
     <h2>Add Event</h2>
     <div class="form-group row add" style="width:50%">
     <input type="hidden" class="form-control" id="_token" name="_token" value="{{ csrf_token() }}"/>
@@ -35,24 +45,7 @@
                     <th class="text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody>
-            @foreach($events as $item)
-                <tr class="item{{$item->id}}">
-                    <td>{{$item->id}}</td>
-                    <td>{{$item->name}}</td>
-                    <td>{{$item->slug}}</td>
-                    <td>{{$item->updated_at}}</td>
-                    <td>{{$item->created_at}}</td>
-                    <td><button class="edit-modal btn btn-info" data-id="{{$item->id}}" data-name="{{$item->name}}" data-slug="{{$item->slug}}">
-                            <span class="glyphicon glyphicon-edit"></span> Edit
-                        </button>
-                        <button class="delete-modal btn btn-danger"
-                        data-id="{{$item->id}}" data-name="{{$item->name}}" data-slug="{{$item->slug}}">
-                            <span class="glyphicon glyphicon-trash"></span> Delete
-                        </button></td>
-                </tr>
-                @endforeach
-            </tbody>
+
         </table>
 
         <div id="myModal" class="modal fade" role="dialog">
@@ -107,12 +100,33 @@
 <script src="//code.jquery.com/jquery-1.12.3.js"></script>
 <script src="//cdn.datatables.net/1.10.12/js/jquery.dataTables.min.js"></script>
 <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js" integrity="sha512-VEd+nq25CkR676O+pLBnDW09R7VQX9Mdiij052gVCp5yVH3jGtH70Ho/UUv4mJDsEdTvqRCFZg0NKGiojGnUCw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
 <script type="text/javascript">
     var APP_URL = {!! json_encode(url('/')) !!}
     $(document).ready(function() {
-        $('#eventsTable').DataTable();
+      
+      let table =  $('#eventsTable').DataTable({
+            type: 'get',
+            ajax:  APP_URL+"/api/v1/events/",
+            columns: [
+                { data: 'id'},
+                { data: 'name'},
+                { data: 'slug' },
+                { data: 'updated_at' },
+                { data: 'created_at' },
+                {
+                    data: null,
+                    className: "dt-center editor-delete",
+                    orderable: false,
+                    "mRender" : function ( data, type, row ) {
+                        return '<button class="edit-modal btn btn-info" data-id='+ data.id +' data-name='+ data.name + ' data-slug='+ data.slug + '><span class="glyphicon glyphicon-edit"></span> Edit</button>' +
+                        '<button class="delete-modal btn btn-danger" data-id='+ data.id +' data-name='+ data.name + ' data-slug='+ data.slug +'><span class="glyphicon glyphicon-trash"></span> Delete</button>'
+                      
+                    }
+                }
+            ]
+           });
        
         $(document).on('click', '.edit-modal', function() {
             $('#footer_action_button').text("Update");
@@ -159,7 +173,8 @@
                         $('.error').text(data.errors.name);
                     } else {
                         $('.error').remove();
-                        $('#eventsTable').append("<tr class='item" + data.id + "'><td>" + data.id + "</td><td>" + data.name + "</td>" + "<td>" + data.slug + "</td><td></td><td></td><td><button class='edit-modal btn btn-info' data-id='" + data.id + "' data-name='" + data.name + "' data-slug='" + data.slug + "'><span class='glyphicon glyphicon-edit'></span> Edit</button> <button class='delete-modal btn btn-danger' data-id='" + data.id + "' data-name='" + data.name + "' ><span class='glyphicon glyphicon-trash'></span> Delete</button></td></tr>");
+                        table.ajax.reload()
+                        toastr.success("Event Added", "Success!");
                     }
                 },
          });
@@ -168,8 +183,8 @@
 
     $('.modal-footer').on('click', '.edit', function() {
         $.ajax({
-            type: 'put',
-            url: APP_URL + '/events/' + $("#id").val() + '/edit',
+            type: 'patch',
+            url: APP_URL + '/api/v1/events/' + $("#id").val(),
             data: {
                 '_token': $('input[name=_token]').val(),
                 'id': $("#id").val(),
@@ -182,7 +197,8 @@
                    
                 } else {
                      $('.error').addClass('hidden');
-                     $('.item' + data.id).replaceWith("<tr class='item" + data.id + "'><td>" + data.id + "</td><td>" + data.name + "</td>" + "<td>" + data.slug + "</td><td></td><td></td><td><button class='edit-modal btn btn-info' data-id='" + data.id + "' data-name='" + data.name + "' data-slug='" + data.slug + "'><span class='glyphicon glyphicon-edit'></span> Edit</button> <button class='delete-modal btn btn-danger' data-id='" + data.id + "' data-name='" + data.name + "' ><span class='glyphicon glyphicon-trash'></span> Delete</button></td></tr>");
+                     toastr.success("Event Updated", "Success!");
+                     table.ajax.reload()
                 }}
             });
     });
@@ -190,13 +206,14 @@
     $('.modal-footer').on('click', '.delete', function() {
         $.ajax({
             type: 'delete',
-            url: APP_URL + '/events/' + $("#id").val() + '/delete',
+            url: APP_URL + '/api/v1/events/' + $(".did").text(),
             data: {
                 '_token': $('input[name=_token]').val(),
                 'id': $('.did').text()
             },
             success: function(data) {
-                $('.item' + $('.did').text()).remove();
+                table.ajax.reload()
+                toastr.success("Event Deleted", "Success!");
             }
         });
     });
